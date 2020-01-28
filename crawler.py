@@ -15,8 +15,11 @@ class crawler():
     #  get the links on the domain's main page
     def __init__(self, domain):
         self.domain = domain
+        self.toSearch = set()
         self.searched = set()
-        self.scrapePage(self.domain)
+        while len(self.searched) < 500:
+            self.scrapePage(self.domain)
+            self.searchLinks()
 
     # appends all new links to self.links
     def scrapePage(self, address):
@@ -29,27 +32,39 @@ class crawler():
             link = ref['href']
             if re.match(self.isAddress, link):
                 if link not in self.searched:
-                    if link not in links:
-                        links.append(ref['href'])
+                    if link not in self.toSearch:
+                        self.toSearch.add(ref['href'])
 
     # thread the exploration of the generated set of links
-    def searchLinks(self, links):
-        self.searched |= set(links)
-        if len(links) > 0:
-            print("NUMBER OF THREADS:\t\t{}".format(len(links)))
-            threads = [threading.Thread(target=self.scrapePage, args=(link,)) for link in links]
+    def searchLinks(self):
+        self.searched |= self.toSearch
+        if len(self.toSearch) > 0:
+            if len(self.toSearch) > 100:
+                print("NUMBER OF THREADS:\t\t100")
+                threads = [threading.Thread(target=self.scrapePage, args=(link,)) for link in self.toSearch[:100]]
 
-            for thread in threads:
-                thread.start()
+                for thread in threads:
+                    thread.start()
 
-            for thread in threads:
-                thread.join()
+                for thread in threads:
+                    thread.join()
+
+                self.toSearch = {}
+            else:
+                print("NUMBER OF THREADS:\t\t{}".format(len(self.toSearch)))
+                threads = [threading.Thread(target=self.scrapePage, args=(link,)) for link in self.toSearch]
+
+                for thread in threads:
+                    thread.start()
+
+                for thread in threads:
+                    thread.join()
+
+                self.toSearch = set()
+
         else:
             print('PASSED')
 
-        # print("SEARCHED:\t{}".format(len(self.searched)))
-
-        # if len(self.searched) > 1000:
         self.fileWrite()
 
 
